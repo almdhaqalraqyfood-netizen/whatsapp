@@ -83,10 +83,10 @@ async function sendWhatsAppMessage(phone, message) {
 
     const cleanedPhone = phone.replace(/\D/g, '');
     let formattedPhone;
-    if (cleanedPhone.startsWith('966')) formattedPhone = cleanedPhone;
-    else if (cleanedPhone.startsWith('0')) formattedPhone = '966' + cleanedPhone.substring(1);
-    else if (cleanedPhone.startsWith('+966')) formattedPhone = cleanedPhone.substring(1);
-    else formattedPhone = '966' + cleanedPhone;
+    if (cleanedPhone.startsWith('967')) formattedPhone = cleanedPhone;
+    else if (cleanedPhone.startsWith('0')) formattedPhone = '967' + cleanedPhone.substring(1);
+    else if (cleanedPhone.startsWith('+967')) formattedPhone = cleanedPhone.substring(1);
+    else formattedPhone = '967' + cleanedPhone;
 
     const chatId = `${formattedPhone}@c.us`;
 
