@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
+const QRCode = require('qrcode'); // تحويل QR Code إلى صورة
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,8 +9,6 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
-
-// تحسين الاستجابة للطلبات الأولى
 app.use((req, res, next) => {
     console.log(`📨 Request: ${req.method} ${req.path}`);
     next();
@@ -43,7 +41,6 @@ function initializeWhatsApp() {
 
     whatsappClient.on('qr', (qr) => {
         console.log('📱 QR Code received! Scan with WhatsApp');
-        qrcode.generate(qr, { small: true });
         qrCodeData = qr;
         isAuthenticated = false;
         clientReady = false;
@@ -80,11 +77,9 @@ function initializeWhatsApp() {
     whatsappClient.initialize();
 }
 
-// دالة لإرسال رسالة واتساب
+// دالة إرسال رسالة WhatsApp
 async function sendWhatsAppMessage(phone, message) {
-    if (!clientReady || !whatsappClient) {
-        throw new Error('WhatsApp client is not ready');
-    }
+    if (!clientReady || !whatsappClient) throw new Error('WhatsApp client is not ready');
 
     const cleanedPhone = phone.replace(/\D/g, '');
     let formattedPhone;
@@ -133,26 +128,35 @@ app.get('/keep-alive', (req, res) => {
     });
 });
 
-app.get('/qr', (req, res) => {
+// QR Endpoint مع صورة
+app.get('/qr', async (req, res) => {
     if (isAuthenticated && clientReady) {
-        return res.json({ status: 'authenticated', message: 'WhatsApp is ready' });
+        return res.send('<h2>✅ WhatsApp Authenticated</h2><p>Client is ready!</p>');
     }
 
     if (qrCodeData) {
-        return res.json({ qr_code: qrCodeData, message: 'Scan this QR code with WhatsApp app' });
+        try {
+            const qrImage = await QRCode.toDataURL(qrCodeData);
+            const html = `
+                <h2>📱 Scan this QR code with WhatsApp mobile app</h2>
+                <img src="${qrImage}" alt="WhatsApp QR Code" />
+            `;
+            return res.send(html);
+        } catch (err) {
+            return res.status(500).send('❌ Failed to generate QR image');
+        }
     }
 
-    res.json({ status: 'generating_qr', message: 'QR code is being generated, refresh in a few seconds...' });
+    res.send('<p>Generating QR code, please refresh in a few seconds...</p>');
 });
 
+// إرسال OTP عبر WhatsApp
 app.post('/send-otp', async (req, res) => {
     const { phone, otp, name = 'عميلنا' } = req.body;
 
     if (!phone || !otp) return res.status(400).json({ success: false, error: 'Phone and OTP are required' });
 
-    if (!clientReady) {
-        return res.status(503).json({ success: false, error: 'WhatsApp not ready', status: 'not_ready' });
-    }
+    if (!clientReady) return res.status(503).json({ success: false, error: 'WhatsApp not ready', status: 'not_ready' });
 
     const message = `🔐 رمز التحقق 🔐\n\nمرحباً ${name}،\n\nرمز التحقق الخاص بك هو: 📱 *${otp}*\n⏰ صالح لمدة 5 دقائق\n⚠️ لا تشارك الرمز مع أي شخص`;
 
@@ -169,6 +173,7 @@ app.post('/send-otp', async (req, res) => {
 // Initialize WhatsApp
 initializeWhatsApp();
 
+// Start server
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 WhatsApp Service running on port ${PORT}`);
     console.log(`📍 Health: https://whatsapp-nx6i.onrender.com/health`);
