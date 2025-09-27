@@ -8,6 +8,12 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// تحسين الاستجابة للطلبات الأولى
+app.use((req, res, next) => {
+    console.log(`📨 Request: ${req.method} ${req.path}`);
+    next();
+});
+
 // Routes
 app.get('/', (req, res) => {
     res.json({
@@ -17,7 +23,8 @@ app.get('/', (req, res) => {
         endpoints: {
             health: '/health',
             qr: '/qr',
-            send_otp: '/send-otp (POST)'
+            send_otp: '/send-otp (POST)',
+            keep_alive: '/keep-alive'
         }
     });
 });
@@ -26,7 +33,17 @@ app.get('/health', (req, res) => {
     res.json({ 
         status: 'healthy', 
         timestamp: new Date().toISOString(),
-        version: '1.0.0'
+        version: '1.0.0',
+        server_time: new Date().toLocaleString('ar-SA')
+    });
+});
+
+// endpoint للإبقاء نشطاً
+app.get('/keep-alive', (req, res) => {
+    res.json({ 
+        status: 'active', 
+        timestamp: new Date().toISOString(),
+        message: 'Service keep-alive ping'
     });
 });
 
@@ -49,38 +66,23 @@ app.post('/send-otp', (req, res) => {
     
     console.log(`📨 OTP to ${phone}: ${otp} for ${name || 'customer'}`);
     
-    res.json({
-        success: true,
-        message: 'OTP sent successfully',
-        phone: phone,
-        method: 'whatsapp',
-        timestamp: new Date().toISOString()
-    });
-});
-
-// إضافة endpoint لإرسال رسائل عامة
-app.post('/send-message', (req, res) => {
-    const { phone, message } = req.body;
-    
-    if (!phone || !message) {
-        return res.status(400).json({
-            success: false,
-            error: 'Phone and message are required'
+    // محاكاة delay لاختبار الأداء
+    setTimeout(() => {
+        res.json({
+            success: true,
+            message: 'OTP sent successfully',
+            phone: phone,
+            method: 'whatsapp',
+            timestamp: new Date().toISOString()
         });
-    }
-    
-    console.log(`💬 Message to ${phone}: ${message}`);
-    
-    res.json({
-        success: true,
-        message: 'Message sent successfully',
-        phone: phone,
-        method: 'whatsapp'
-    });
+    }, 1000); // delay لمحاكاة الإرسال الحقيقي
 });
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 WhatsApp Service running on port ${PORT}`);
-    console.log(`📍 Base URL: http://localhost:${PORT}`);
-    console.log(`📍 Health: http://localhost:${PORT}/health`);
+    console.log(`📍 Base URL: https://whatsapp-nx6i.onrender.com`);
+    console.log(`📍 Health: https://whatsapp-nx6i.onrender.com/health`);
+    
+    // رسالة ترحيب عند بدء التشغيل
+    console.log('💡 Note: Free instance may take 50s to wake up after inactivity');
 });
